@@ -119,4 +119,38 @@ public class SimpleAttachmentIntegrationTests extends ElasticsearchIntegrationTe
 
         index("test", "person", jsonBuilder().startObject().field("file").startObject().endObject());
     }
+    
+    @Test
+    public void testProblematicAttachment1() throws Exception {
+        String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/xcontent/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/9c86adb6adef4c34836f7f4ac072e2c6.pdf");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        //CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file.title", "REVISION OF RESOLUTION"))).actionGet();
+        //assertThat(countResponse.getCount(), equalTo(1l));
+
+        CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file", "fire protection y"))).actionGet();
+        assertThat(countResponse.getCount(), equalTo(1l));
+    }
+    
+    @Test
+    public void testProblematicAttachment2() throws Exception {
+        String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/xcontent/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/b05277ceb7a949268c5a973802603b4e.pdf");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        //CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file.title", "AMENDMENTS TO THE IMDG CODE"))).actionGet();
+        //assertThat(countResponse.getCount(), equalTo(1l));
+
+        CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file", "cargo transport"))).actionGet();
+        assertThat(countResponse.getCount(), equalTo(1l));
+    }
 }
