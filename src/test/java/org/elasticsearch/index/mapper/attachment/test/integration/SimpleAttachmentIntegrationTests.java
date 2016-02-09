@@ -31,14 +31,16 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.elasticsearch.client.Requests.countRequest;
 import static org.elasticsearch.client.Requests.putMappingRequest;
 import static org.elasticsearch.common.io.Streams.copyToBytesFromClasspath;
 import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.containsString;
 
 /**
  *
@@ -251,5 +253,47 @@ public class SimpleAttachmentIntegrationTests extends AttachmentIntegrationTestC
                 }
             }
         }
+    }
+    
+    @Test
+    public void testProblematicAttachment1() throws Exception {
+    	String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/attachment/test/integration/simple/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/9c86adb6adef4c34836f7f4ac072e2c6.pdf");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        CountResponse countResponse = client().prepareCount("test").setQuery(queryStringQuery("fire protection y").defaultField("file")).execute().get();
+        assertThat(countResponse.getCount(), equalTo(1l));
+    }
+    
+    @Test
+    public void testProblematicAttachment2() throws Exception {
+    	String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/attachment/test/integration/simple/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/b05277ceb7a949268c5a973802603b4e.pdf");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        CountResponse countResponse = client().prepareCount("test").setQuery(queryStringQuery("cargo transport").defaultField("file")).execute().get();
+        assertThat(countResponse.getCount(), equalTo(1l));
+    }
+    
+    @Test
+    public void testProblematicMP3() throws Exception {
+    	String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/attachment/test/integration/simple/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/corrupt.mp3");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        CountResponse countResponse = client().prepareCount("test").setQuery(matchAllQuery()).execute().get();
+        assertThat(countResponse.getCount(), equalTo(1l));
     }
 }
