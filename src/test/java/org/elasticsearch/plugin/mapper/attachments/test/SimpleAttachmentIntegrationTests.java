@@ -32,6 +32,7 @@ import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
 import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.fieldQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.hamcrest.Matchers.equalTo;
 
 /**
@@ -130,9 +131,6 @@ public class SimpleAttachmentIntegrationTests extends ElasticsearchIntegrationTe
         index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
         refresh();
 
-        //CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file.title", "REVISION OF RESOLUTION"))).actionGet();
-        //assertThat(countResponse.getCount(), equalTo(1l));
-
         CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file", "fire protection y"))).actionGet();
         assertThat(countResponse.getCount(), equalTo(1l));
     }
@@ -147,10 +145,21 @@ public class SimpleAttachmentIntegrationTests extends ElasticsearchIntegrationTe
         index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
         refresh();
 
-        //CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file.title", "AMENDMENTS TO THE IMDG CODE"))).actionGet();
-        //assertThat(countResponse.getCount(), equalTo(1l));
-
         CountResponse countResponse = client().count(countRequest("test").query(fieldQuery("file", "cargo transport"))).actionGet();
+        assertThat(countResponse.getCount(), equalTo(1l));
+    }
+    
+    @Test
+    public void testProblematicMP3() throws Exception {
+        String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/xcontent/test-mapping.json");
+        byte[] html = copyToBytesFromClasspath("/org/elasticsearch/index/mapper/xcontent/corrupt.mp3");
+
+        client().admin().indices().putMapping(putMappingRequest("test").type("person").source(mapping)).actionGet();
+
+        index("test", "person", jsonBuilder().startObject().field("file", html).endObject());
+        refresh();
+
+        CountResponse countResponse = client().count(countRequest("test").query(matchAllQuery())).actionGet();
         assertThat(countResponse.getCount(), equalTo(1l));
     }
 }
